@@ -42,30 +42,30 @@ def buildModelEq(x,dist,price):
     dMdt  = []
     dMxdt = []
     for i in range(NT-1):
-        yk = MX.sym('y_' + str(i))
+        yk = SX.sym('y_' + str(i))
         y += [yk]
         
-        Vk = MX.sym('V_' + str(i))
+        Vk = SX.sym('V_' + str(i))
         V += [Vk]
         
-        Lk = MX.sym('L_' + str(i))
+        Lk = SX.sym('L_' + str(i))
         L += [Lk]
 
-        dMdtk = MX.sym('dMdt_' + str(i))
+        dMdtk = SX.sym('dMdt_' + str(i))
         dMdt += [dMdtk]
         
-        dMxdtk = MX.sym('dMxdt_' + str(i))
+        dMxdtk = SX.sym('dMxdt_' + str(i))
         dMxdt += [dMxdtk]
     
-    L_NT          = MX.sym('L_' + str(NT-1))
+    L_NT          = SX.sym('L_' + str(NT-1))
     L            += [L_NT]
-    dMdt_NT       = MX.sym('dMdt_' + str(NT-1))
+    dMdt_NT       = SX.sym('dMdt_' + str(NT-1))
     dMdt         += [dMdt_NT]
-    dMxdt_NT      = MX.sym('dMxdt_' + str(NT-1))
+    dMxdt_NT      = SX.sym('dMxdt_' + str(NT-1))
     dMxdt        += [dMxdt_NT]
-    dMdt_NT1      = MX.sym('dMdt_' + str(NT))
+    dMdt_NT1      = SX.sym('dMdt_' + str(NT))
     dMdt         += [dMdt_NT1]
-    dMxdt_NT1     = MX.sym('dMxdt_' + str(NT))
+    dMxdt_NT1     = SX.sym('dMxdt_' + str(NT))
     dMxdt        += [dMxdt_NT1]
     
     y = vertcat(*y)
@@ -75,14 +75,14 @@ def buildModelEq(x,dist,price):
     # Vapor Flows assuming constant molar flows
     V = vertcat(*V)
     for i in range(NT-1):
-        if i >= NT:
+        if i >= NF:
             V[i] = VB + (1-qF)*F
         else:
             V[i] = VB
             
     L     = vertcat(*L)
     L     = vertcat(L,LT)
-    for i in range(1,NT-1):
+    for i in range(1,NT):
         if i <= NF:
             L[i] = L0b + (x[NT+1+i]-Muw)/taul
         else:
@@ -101,8 +101,8 @@ def buildModelEq(x,dist,price):
         
     # Correction for feed at the feed stage
     # The feed is assumed to be mixed into the feed stage
-    dMdt[NF-1] = dMdt[NF]  + F
-    dMxdt[NF-1]= dMxdt[NF] + F*x[NT]
+    dMdt[NF-1] = dMdt[NF-1]  + F
+    dMxdt[NF-1]= dMxdt[NF-1] + F*x[NT]
     
     # Reboiler (assumed to be an equilibrium stage)
     dMdt[0] = L[1]      - V[0]      - B
@@ -115,7 +115,7 @@ def buildModelEq(x,dist,price):
     # Compute the derivative for the mole fractions from d(Mx) = x dM + M dx
     ceq = []
     for i in range(2*NT+2):
-        ceq_k  = MX.sym('ceq_' + str(i))
+        ceq_k  = SX.sym('ceq_' + str(i))
         ceq   += [ceq_k]
         
     # CSTR model
@@ -128,15 +128,15 @@ def buildModelEq(x,dist,price):
         ceq[i] = dMxdt[i]
         
     for i in range(NT+1):
-        ceq[NT+i] = dMdt[i]
+        ceq[NT+1+i] = dMdt[i]
         
     # bound constraints
     lb_u = [0.1, 0.1, 0.1, 0.1, 0.1]
     ub_u = [10, 4.008, 10, 1.0, 1.0]
     
     # State bounds and initial guess
-    x_min     = np.zeros(84)
-    x_max     = np.ones(84)
+    x_min     = np.zeros(84,dtype=np.float)
+    x_max     = np.ones(84,dtype=np.float)
     xB_max    = 0.1
     x_max[0]  = xB_max
     x_min[83] = 0.3
@@ -176,24 +176,24 @@ if __name__ == "__main__":
     x = []
     l = []
     for i in range(2*NT+2):
-        xk  = MX.sym('x_' + str(i))
+        xk  = SX.sym('x_' + str(i))
         x  += [xk]
         
-        lk  = MX.sym('l_ + str(i)')
+        lk  = SX.sym('l_' + str(i))
         l  += [lk]
 
-    u1  = MX.sym('u1')   # LT
-    u2  = MX.sym('u2')   # VB
-    u3  = MX.sym('u3')   # F
-    u4  = MX.sym('u4')   # D
-    u5  = MX.sym('u5')   # B
+    u1  = SX.sym('u1')   # LT
+    u2  = SX.sym('u2')   # VB
+    u3  = SX.sym('u3')   # F
+    u4  = SX.sym('u4')   # D
+    u5  = SX.sym('u5')   # B
     
     # concatenate states and controls 
     x   = vertcat(*x)
     x   = vertcat(x,u1,u2,u3,u4,u5)
     
     # decision variables are states and controls
-    Xinit = 0.5*np.ones(84)
+    Xinit = 0.5*np.ones(84,dtype=np.float)
     Uinit = vertcat(Xinit,LT,VB,F,D,B)
     
     # define the dynamics as equality constraints and additional inequality
