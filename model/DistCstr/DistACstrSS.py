@@ -1,5 +1,5 @@
 '''
-Created on 15. okt. 2017
+Created on 16 October 2017
 
 Steady State Optimization for CSTR + Distillation Column A 
 
