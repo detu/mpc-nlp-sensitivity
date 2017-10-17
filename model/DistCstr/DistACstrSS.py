@@ -41,7 +41,7 @@ def buildModelEq(x,dist,price):
     L = []
     dMdt  = []
     dMxdt = []
-    for i in range(NT-1):
+    for i in range(NT):
         yk = SX.sym('y_' + str(i))
         y += [yk]
         
@@ -69,24 +69,26 @@ def buildModelEq(x,dist,price):
     dMxdt        += [dMxdt_NT1]
     
     y = vertcat(*y)
-    for i in range(NT-1):
+    for i in range(NT):
         y[i] = alpha*x[i] / (1 + (alpha-1)*x[i])
         
     # Vapor Flows assuming constant molar flows
     V = vertcat(*V)
-    for i in range(NT-1):
+    for i in range(NT):
         if i >= NF:
             V[i] = VB + (1-qF)*F
         else:
             V[i] = VB
             
+    #L     = vertcat(*L)
+    #L     = vertcat(L,LT)
+    L  += [LT]
     L     = vertcat(*L)
-    L     = vertcat(L,LT)
     for i in range(1,NT):
         if i <= NF:
-            L[i] = L0b + (x[NT+1+i]-Muw)/taul
+            L[i] = L0b + (x[NT+i]-Muw)/taul
         else:
-            L[i] = L0  + (x[NT+1+i]-Muw)/taul
+            L[i] = L0  + (x[NT+i]-Muw)/taul
             
     # Time derivatives from  material balances for 
     # 1) total holdup and 2) component holdup
@@ -119,7 +121,7 @@ def buildModelEq(x,dist,price):
         ceq   += [ceq_k]
         
     # CSTR model
-    k1          = 34.1/60.0
+    k1        = 34.1/60.0
     dMdt[NT]  = F_0 + D - F
     dMxdt[NT] = F_0*zF + D*x[NT-1] - F*x[NT] - k1*x[2*NT+1]*x[NT]
     
@@ -135,16 +137,16 @@ def buildModelEq(x,dist,price):
     ub_u = [10, 4.008, 10, 1.0, 1.0]
     
     # State bounds and initial guess
-    x_min     = np.zeros(84,dtype=np.float)
-    x_max     = np.ones(84,dtype=np.float)
-    xB_max    = 0.1
+    x_min     = np.zeros(84,dtype=np.float64)
+    x_max     = np.ones(84,dtype=np.float64)
+    xB_max    = 0.1000000000
     x_max[0]  = xB_max
-    x_min[83] = 0.3
-    x_max[83] = 0.7
+    x_min[83] = 0.3000000000
+    x_max[83] = 0.7000000000
     lbx       = vertcat(x_min,lb_u)
     ubx       = vertcat(x_max,ub_u)
-    lbg       = np.zeros(2*(NT+1))
-    ubg       = np.zeros(2*(NT+1))
+    lbg       = np.zeros(2*(NT+1),dtype=np.float64)
+    ubg       = np.zeros(2*(NT+1),dtype=np.float64)
     
     return J, ceq, lbx, ubx, lbg, ubg
 
@@ -193,7 +195,7 @@ if __name__ == "__main__":
     x   = vertcat(x,u1,u2,u3,u4,u5)
     
     # decision variables are states and controls
-    Xinit = 0.5*np.ones(84,dtype=np.float)
+    Xinit = 0.5*np.ones(84,dtype=np.float64)
     Uinit = vertcat(Xinit,LT,VB,F,D,B)
     
     # define the dynamics as equality constraints and additional inequality
